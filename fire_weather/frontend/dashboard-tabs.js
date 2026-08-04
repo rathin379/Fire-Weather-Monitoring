@@ -21,6 +21,7 @@
   };
   const friendly = (value, fallback = "unknown") => String(value || fallback).replaceAll("_", " ");
 
+  // Switch panels and refresh only the service needed by the selected tab.
   function activate(panelId) {
     activePanel = panelId;
     document.querySelectorAll(".dashboard-tab").forEach((button) => {
@@ -46,6 +47,7 @@
     container.append(item);
   }
 
+  // Render the newest persisted events as easy-to-scan cards.
   function renderStream(events) {
     const feed = byId("liveEventFeed");
     feed.replaceChildren();
@@ -94,11 +96,13 @@
     });
   }
 
+  // Close the persistent stream before pausing or reconnecting.
   function closeLiveStream() {
     if (liveSource) liveSource.close();
     liveSource = null;
   }
 
+  // Keep only the 30 newest unique events in the live panel.
   function addLiveEvent(event) {
     const eventId = Number(event.id) || 0;
     lastLiveId = Math.max(lastLiveId, eventId);
@@ -107,6 +111,8 @@
     byId("liveStatus").textContent = `Event received ${new Date().toLocaleTimeString()} | persistent connection`;
   }
 
+  // Server-Sent Events keep one read-only connection open so new committed
+  // PostgreSQL rows appear without generating anything in the browser.
   function connectLiveStream() {
     closeLiveStream();
     if (streamPaused || typeof EventSource === "undefined") return;
@@ -127,6 +133,7 @@
     });
   }
 
+  // Load an initial snapshot first, then continue with live updates.
   async function refreshStream() {
     if (streamPaused) return;
     closeLiveStream();
@@ -151,6 +158,7 @@
       renderStream([]);
     }
   }
+  // Use the dashboard proxy first and fall back to the direct local ML port.
   async function fetchMl(path, options = {}) {
     const response = await fetch(`${ML_URL}${path}`, options);
     const contentType = response.headers.get("Content-Type") || "";
@@ -165,6 +173,7 @@
     chip.textContent = text;
   }
 
+  // Check that the saved models are loaded before enabling predictions.
   async function checkMlHealth() {
     try {
       const response = await fetchMl("/health", { cache:"no-store" });
@@ -182,6 +191,7 @@
     pressure_risk_classifier: "Uses temperature plus pressure change per hour. The service retrieves the prior valid event for this device from PostgreSQL.",
   };
 
+  // Explain what the selected model predicts in plain language.
   function updateModelExplanation() {
     const task = byId("mlModel").value;
     byId("mlExplanation").textContent = explanations[task];
@@ -195,6 +205,7 @@
     list.append(term, detail);
   }
 
+  // Display the prediction, model version, inputs, and any database context.
   function renderPrediction(body) {
     const result = byId("mlResult");
     result.replaceChildren();
@@ -218,6 +229,7 @@
     result.append(label, value, interpretation, details);
   }
 
+  // Send the selected event to the ML service without changing the event itself.
   async function submitPrediction(event) {
     event.preventDefault();
     const button = byId("mlSubmit");

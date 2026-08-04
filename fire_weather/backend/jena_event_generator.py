@@ -22,10 +22,12 @@ DEVICE_ID = "jena_weather_node_01"
 
 
 def _round(value: float) -> float:
+    """Keep generated sensor values readable and consistent."""
     return round(value, 2)
 
 
 def _pick_scenario(requested: str, rng: random.Random) -> str:
+    """Choose one realistic profile when mixed mode is requested."""
     if requested != "mixed":
         return requested
     roll = rng.random()
@@ -39,6 +41,7 @@ def _pick_scenario(requested: str, rng: random.Random) -> str:
 
 
 def _normal_values(rng: random.Random) -> dict[str, float]:
+    """Create measurements for ordinary weather conditions."""
     temperature = _round(rng.uniform(16.0, 27.0))
     humidity = _round(max(42.0, min(78.0, 74.0 - (temperature - 16.0) * 1.7 + rng.uniform(-5.0, 5.0))))
     wind = _round(rng.uniform(0.8, 5.5))
@@ -54,6 +57,7 @@ def _normal_values(rng: random.Random) -> dict[str, float]:
 
 
 def _scenario_values(scenario: str, rng: random.Random) -> dict[str, Any]:
+    """Create measurements that match the selected demo condition."""
     if scenario == "normal":
         return _normal_values(rng)
     if scenario == "elevated_dry":
@@ -105,6 +109,7 @@ def generate_jena_telemetry(scenario: str = "mixed", rng: random.Random | None =
 
 
 def _summary(event: dict[str, Any]) -> str:
+    """Describe downstream classification without changing the raw event."""
     scenario = classify_scenario(event)
     quality = "invalid" if scenario == "sensor_fault" else "valid"
     assessment = assess_fire_weather({**event, "data_quality": quality})
@@ -113,6 +118,7 @@ def _summary(event: dict[str, Any]) -> str:
 
 
 def publish_events(args: argparse.Namespace) -> None:
+    """Generate events, publish them to MQTT, and print a short run summary."""
     rng = random.Random(args.seed)
     scenario = canonical_scenario(args.scenario)
     client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
@@ -152,6 +158,7 @@ def publish_events(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
+    """Read command-line options and start the generator."""
     parser = argparse.ArgumentParser(description="Publish Fire Weather telemetry scenarios through MQTT.")
     parser.add_argument("-s", "--scenario", default="mixed", choices=(*SCENARIOS, "outlier", "failure"), help="Scenario to generate; outlier/failure remain supported aliases.")
     parser.add_argument("-c", "--count", type=int, default=0, help="Number of events to publish (0 streams until Ctrl+C).")

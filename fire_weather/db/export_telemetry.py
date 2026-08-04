@@ -44,12 +44,14 @@ QUERY = """
 
 
 def format_number(value: Any) -> str:
+    """Format a database number without unnecessary trailing zeroes."""
     if value is None:
         return ""
     return f"{float(value):.4f}".rstrip("0").rstrip(".")
 
 
 def jena_row(event: dict[str, Any]) -> list[str]:
+    """Convert one stored event to the column order used by the Jena dataset."""
     derived = jena_compatible_values(event)
     observed_at = event["observed_at"]
     if isinstance(observed_at, str):
@@ -74,6 +76,7 @@ def jena_row(event: dict[str, Any]) -> list[str]:
 
 
 def fetch_events() -> list[dict[str, Any]]:
+    """Read valid events in timestamp order for a consistent export."""
     with psycopg2.connect(DSN) as connection, connection.cursor() as cursor:
         cursor.execute(QUERY)
         names = [column.name for column in cursor.description]
@@ -81,6 +84,7 @@ def fetch_events() -> list[dict[str, Any]]:
 
 
 def main() -> None:
+    """Export either an ML-ready CSV or a full audit CSV."""
     parser = argparse.ArgumentParser(description="Export persisted Fire Weather data.")
     parser.add_argument("--format", choices=("ml", "flat"), default="ml", help="ml matches the Jena notebook header exactly; flat is an auditable event export.")
     parser.add_argument("--output", type=Path, default=Path(os.getenv("FIRE_EXPORT_PATH", DEFAULT_OUTPUT)))

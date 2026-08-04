@@ -13,6 +13,7 @@ WINDOWS = {"24h": timedelta(hours=24), "7d": timedelta(days=7), "30d": timedelta
 
 
 def main() -> None:
+    """Run the standard database checks used during the project demo."""
     parser = argparse.ArgumentParser(description="Verify Fire Weather records in PostgreSQL.")
     parser.add_argument("--window", choices=WINDOWS, default="24h")
     args = parser.parse_args()

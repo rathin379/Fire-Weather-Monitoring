@@ -71,6 +71,7 @@ def load_dataset(path: Path, pressure_horizon_hours: float) -> pd.DataFrame:
 
 
 def systematic_sample(frame: pd.DataFrame, max_samples: int) -> pd.DataFrame:
+    """Keep an evenly spaced sample when the source data is very large."""
     if len(frame) <= max_samples:
         return frame.copy()
     step = max(1, len(frame) // max_samples)
@@ -78,6 +79,7 @@ def systematic_sample(frame: pd.DataFrame, max_samples: int) -> pd.DataFrame:
 
 
 def split_classification(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, ...]:
+    """Create separate training, validation, and test sets for a classifier."""
     labels, counts = np.unique(y, return_counts=True)
     if len(labels) != 2 or counts.min() < 8:
         distribution = dict(zip(labels.tolist(), counts.tolist()))
@@ -92,6 +94,7 @@ def split_classification(x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, ...]
 
 
 def choose_decision_threshold(model: Any, x_validation: np.ndarray, y_validation: np.ndarray) -> float:
+    """Choose the probability cutoff that gives the best validation F1 score."""
     probability = model.predict_proba(x_validation)[:, 1]
     precision, recall, thresholds = precision_recall_curve(y_validation, probability)
     if len(thresholds) == 0:
@@ -103,6 +106,7 @@ def choose_decision_threshold(model: Any, x_validation: np.ndarray, y_validation
 def classification_metrics(
     model: Any, x_test: np.ndarray, y_test: np.ndarray, decision_threshold: float
 ) -> dict[str, float]:
+    """Calculate classification scores on data the model did not train on."""
     probability = model.predict_proba(x_test)[:, 1]
     predicted = (probability >= decision_threshold).astype(int)
     return {
@@ -117,6 +121,7 @@ def classification_metrics(
 
 
 def save_bundle(output_dir: Path, filename: str, bundle: dict[str, Any]) -> None:
+    """Save a trained model together with its version and supporting details."""
     joblib.dump(bundle, output_dir / filename)
 
 
@@ -127,6 +132,7 @@ def train_models(
     max_samples: int,
     pressure_horizon_hours: float,
 ) -> dict[str, Any]:
+    """Train all three project models and write their manifest and model files."""
     prepared = load_dataset(dataset, pressure_horizon_hours)
     sampled = systematic_sample(prepared, max_samples)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -227,6 +233,7 @@ def train_models(
 
 
 def main() -> None:
+    """Read training options, train the models, and print their results."""
     parser = argparse.ArgumentParser(description="Train the three Fire Weather prediction models.")
     parser.add_argument("--input", type=Path, default=DEFAULT_DATASET, help="Jena-compatible training CSV.")
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_MODEL_DIR)

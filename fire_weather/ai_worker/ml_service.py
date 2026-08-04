@@ -30,6 +30,7 @@ class PredictionError(ValueError):
 
 
 def parse_number(event: dict[str, Any], field: str, minimum: float, maximum: float) -> float:
+    """Read and range-check one numeric field from a prediction request."""
     try:
         value = float(event[field])
     except (KeyError, TypeError, ValueError) as error:
@@ -40,6 +41,7 @@ def parse_number(event: dict[str, Any], field: str, minimum: float, maximum: flo
 
 
 def parse_timestamp(value: Any) -> datetime:
+    """Use the supplied UTC time, or the current time when it is omitted."""
     if value in (None, ""):
         return datetime.now(timezone.utc)
     try:
@@ -52,6 +54,7 @@ def parse_timestamp(value: Any) -> datetime:
 
 
 def load_models(model_dir: Path) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Load the model manifest and verify all three saved models."""
     manifest_path = model_dir / "manifest.json"
     if not manifest_path.exists():
         raise RuntimeError(f"Model manifest not found: {manifest_path}. Run train_models.py first.")
@@ -69,6 +72,7 @@ def load_models(model_dir: Path) -> tuple[dict[str, Any], dict[str, Any]]:
 
 
 def find_previous_pressure(device_id: str, observed_at: datetime) -> dict[str, Any]:
+    """Find the nearest earlier pressure reading for the same device."""
     query = """
         SELECT pressure_mbar, observed_at
         FROM fire_weather_events
@@ -93,6 +97,7 @@ def find_previous_pressure(device_id: str, observed_at: datetime) -> dict[str, A
 def pressure_rate_for_event(
     event: dict[str, Any], current_pressure: float, observed_at: datetime
 ) -> tuple[float, dict[str, Any]]:
+    """Calculate hourly pressure change from the request or PostgreSQL history."""
     # Automated API tests may provide an explicit rate. The dashboard does not;
     # it exercises the manager-requested PostgreSQL context lookup.
     explicit = event.get("pressure_rate_mbar_per_hour")
@@ -121,6 +126,7 @@ def pressure_rate_for_event(
 
 
 def make_prediction(models: dict[str, Any], task: str, event: dict[str, Any]) -> dict[str, Any]:
+    """Run one selected model and return a clear, dashboard-ready result."""
     if task not in TASKS:
         raise PredictionError(f"model must be one of: {', '.join(TASKS)}")
     temperature = parse_number(event, "temperature", -80, 60)
@@ -182,6 +188,7 @@ def make_prediction(models: dict[str, Any], task: str, event: dict[str, Any]) ->
 
 
 def create_app(model_dir: Path = MODEL_DIR) -> Flask:
+    """Build the Flask application and load its models once at startup."""
     app = Flask(__name__)
     manifest, models = load_models(model_dir)
     app.config["MODEL_MANIFEST"] = manifest
@@ -189,6 +196,7 @@ def create_app(model_dir: Path = MODEL_DIR) -> Flask:
 
     @app.after_request
     def add_cors_headers(response):
+        """Allow requests from the local dashboard and disable caching."""
         origin = request.headers.get("Origin")
         if origin in ALLOWED_ORIGINS:
             response.headers["Access-Control-Allow-Origin"] = origin
@@ -200,6 +208,7 @@ def create_app(model_dir: Path = MODEL_DIR) -> Flask:
 
     @app.get("/health")
     def health():
+        """Report which model version and prediction tasks are ready."""
         return jsonify({
             "status": "ok",
             "service": "fire-weather-ml",
@@ -209,6 +218,7 @@ def create_app(model_dir: Path = MODEL_DIR) -> Flask:
 
     @app.route("/predict", methods=["POST", "OPTIONS"])
     def predict():
+        """Validate one event and return the requested prediction."""
         if request.method == "OPTIONS":
             return ("", 204)
         payload = request.get_json(silent=True)
@@ -229,6 +239,7 @@ def create_app(model_dir: Path = MODEL_DIR) -> Flask:
 
 
 def main() -> None:
+    """Start the local machine-learning service."""
     print("[ML SERVICE] Starting AI/ML service")
     app = create_app()
     manifest = app.config["MODEL_MANIFEST"]
