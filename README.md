@@ -40,6 +40,13 @@ No original SensorDashboard package, another intern's files, virtual environment
 
 The commands below use Windows PowerShell and assume the current directory is the `fire_weather` folder.
 
+After cloning the repository, enter that folder first:
+
+```powershell
+git clone https://github.com/rathin379/Fire-Weather-Monitoring.git
+cd .\Fire-Weather-Monitoring\fire_weather
+```
+
 ## 1. Install the Python packages
 
 ```powershell
@@ -128,7 +135,7 @@ Then restart the subscriber and run the generator command again.
 
 ## 5. Train or test the ML components
 
-The package already contains the three final saved models. Rebuild them from the packaged dataset with:
+The package contains three saved exploratory models for the demonstration. Rebuild them from the packaged dataset with:
 
 ```powershell
 python .\ai_worker\train_models.py --max-samples 100000
@@ -159,16 +166,17 @@ python -m unittest backend.test_fire_api backend.test_pipeline_contract ai_worke
 - If the ML tab reports an offline service, start `python .\ai_worker\ml_service.py`.
 
 Stop the generator, subscriber, API, ML service, and foreground Mosquitto broker with `Ctrl+C` in their terminals. PostgreSQL and Mosquitto Windows services may then be stopped through Windows Services if the demonstration computer does not need them.
+
 ## Edge status
 
 Arduino sketches and physical sensor photographs are intentionally not included yet. The required placeholder, future image folder, and handoff instructions are in `edge/README.md`. No physical hardware implementation is claimed in this release.
 
 ## Project documents
 
-- `docs/presentation/Fire Weather Monitoring Project.pptx`
-- `docs/presentation/Google_Slides_Link.docx`
-- `docs/research/Fire_Weather_Monitoring_Deep_Dive.docx`
-- `docs/research/research_urls.doc`
-- `docs/FIRE_DATA_CONTRACT.md`
+- [PowerPoint presentation](fire_weather/docs/presentation/Fire%20Weather%20Monitoring%20Project.pptx)
+- [Google Slides access document](fire_weather/docs/presentation/Google_Slides_Link.docx)
+- [Deep-dive research report](fire_weather/docs/research/Fire_Weather_Monitoring_Deep_Dive.docx)
+- [Research URL list](fire_weather/docs/research/research_urls.txt)
+- [Raw event and database contract](fire_weather/docs/FIRE_DATA_CONTRACT.md)
 
 The research report distinguishes the implemented software system from proposed future Arduino deployment.

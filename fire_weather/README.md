@@ -128,7 +128,7 @@ Then restart the subscriber and run the generator command again.
 
 ## 5. Train or test the ML components
 
-The package already contains the three final saved models. Rebuild them from the packaged dataset with:
+The package contains three saved exploratory models for the demonstration. Rebuild them from the packaged dataset with:
 
 ```powershell
 python .\ai_worker\train_models.py --max-samples 100000
@@ -159,6 +159,7 @@ python -m unittest backend.test_fire_api backend.test_pipeline_contract ai_worke
 - If the ML tab reports an offline service, start `python .\ai_worker\ml_service.py`.
 
 Stop the generator, subscriber, API, ML service, and foreground Mosquitto broker with `Ctrl+C` in their terminals. PostgreSQL and Mosquitto Windows services may then be stopped through Windows Services if the demonstration computer does not need them.
+
 ## Edge status
 
 Arduino sketches and physical sensor photographs are intentionally not included yet. The required placeholder, future image folder, and handoff instructions are in `edge/README.md`. No physical hardware implementation is claimed in this release.
@@ -168,7 +169,7 @@ Arduino sketches and physical sensor photographs are intentionally not included 
 - `docs/presentation/Fire Weather Monitoring Project.pptx`
 - `docs/presentation/Google_Slides_Link.docx`
 - `docs/research/Fire_Weather_Monitoring_Deep_Dive.docx`
-- `docs/research/research_urls.doc`
+- `docs/research/research_urls.txt`
 - `docs/FIRE_DATA_CONTRACT.md`
 
 The research report distinguishes the implemented software system from proposed future Arduino deployment.

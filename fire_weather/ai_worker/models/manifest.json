@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "model_version": "2.0.0",
   "trained_at": "2026-08-03T21:44:27.852474+00:00",
-  "training_source": "C:\\Users\\rathi\\OneDrive\\Documents\\ByteSmart Internship\\iot_simulation\\jena_climate_2009_2016.csv",
+  "training_source": "docs/datasets/jena_climate_2009_2016.csv",
   "training_rows": 411910,
   "sampled_rows": 100000,
   "tasks": {
