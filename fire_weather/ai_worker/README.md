@@ -13,3 +13,9 @@ python -m unittest ai_worker.test_ml_service -v
 ```
 
 The training CSV is in `../docs/datasets`, as required by the final package structure. The pressure-risk task normally uses PostgreSQL to retrieve the previous valid pressure observation for the submitted device; set `POSTGRES_DSN` before starting the service.
+
+## Model limits
+
+These are exploratory weather models, not wildfire forecasts. The Jena dataset contains weather measurements but no ignition, spread, or burned-area outcomes.
+
+The low-humidity target is especially rare. In the packaged evaluation, only 0.22% of rows are positive, and the saved classifier has 0.0909 precision, recall, and F1. Its 0.996 accuracy is mostly caused by class imbalance, so accuracy should not be read as strong predictive performance. The dashboard presents this output as an educational screening signal only.
