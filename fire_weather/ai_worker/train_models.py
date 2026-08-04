@@ -125,6 +125,15 @@ def save_bundle(output_dir: Path, filename: str, bundle: dict[str, Any]) -> None
     joblib.dump(bundle, output_dir / filename)
 
 
+def portable_training_source(dataset: Path) -> str:
+    """Record a useful source name without exposing one developer's computer path."""
+    resolved = dataset.resolve()
+    try:
+        return resolved.relative_to(PROJECT_ROOT.resolve()).as_posix()
+    except ValueError:
+        return resolved.name
+
+
 def train_models(
     dataset: Path,
     output_dir: Path,
@@ -183,10 +192,11 @@ def train_models(
     pressure_threshold = choose_decision_threshold(pressure_model, x_validation, y_validation)
     pressure_metrics = classification_metrics(pressure_model, x_test, y_test, pressure_threshold)
 
+    training_source = portable_training_source(dataset)
     common = {
         "model_version": model_version,
         "trained_at": trained_at,
-        "training_source": str(dataset.resolve()),
+        "training_source": training_source,
     }
     save_bundle(output_dir, MODEL_FILES["humidity_regression"], {
         **common,
@@ -219,7 +229,7 @@ def train_models(
         "schema_version": "1.0",
         "model_version": model_version,
         "trained_at": trained_at,
-        "training_source": str(dataset.resolve()),
+        "training_source": training_source,
         "training_rows": int(len(prepared)),
         "sampled_rows": int(len(sampled)),
         "tasks": {
