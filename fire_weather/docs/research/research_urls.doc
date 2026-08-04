@@ -1,0 +1,24 @@
+Fire Weather Monitoring - Research URLs
+Updated: August 2026
+
+Primary dataset
+https://www.kaggle.com/datasets/pankrzysiu/weather-archive-jena
+
+Weather and fire-weather background
+https://www.weather.gov/
+https://www.weather.gov/fire/
+https://www.weather.gov/tae/redflag_criteria
+https://www.ncei.noaa.gov/
+https://www.nifc.gov/fire-information
+https://cwfis.cfs.nrcan.gc.ca/background
+https://cwfis.cfs.nrcan.gc.ca/index.php/background/dsm/fwi
+
+Technical documentation
+https://mqtt.org/
+https://mosquitto.org/documentation/
+https://www.postgresql.org/docs/
+https://flask.palletsprojects.com/
+https://scikit-learn.org/stable/
+https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events
+
+These URLs supported the dataset study, weather-risk interpretation, MQTT and database architecture, dashboard streaming, and machine-learning implementation. The project report and slide deck summarize the conclusions; this file provides the online references requested for the final package.

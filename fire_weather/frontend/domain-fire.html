@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fire Weather Monitoring</title>
+  <link rel="stylesheet" href="shared.css">
+  <link rel="stylesheet" href="fire.css">
+  <link rel="stylesheet" href="dashboard-tabs.css">
+</head>
+<body>
+  <header class="site-header">
+    <div>
+      <p class="eyebrow">Operational fire weather monitoring</p>
+      <h1>Fire Weather Control Room</h1>
+      <p class="intro-copy">Read-only analysis of telemetry persisted through MQTT and PostgreSQL. The risk score is a transparent screening indicator, not an official Fire Weather Index or agency warning.</p>
+    </div>
+    <div class="connection-card" aria-live="polite">
+      <span class="connection-dot" id="connectionDot"></span>
+      <div><strong id="connectionTitle">Connecting to database...</strong><span id="connectionStatus">The dashboard never generates events or writes data.</span></div>
+    </div>
+  </header>
+  <nav class="dashboard-tabs" role="tablist" aria-label="Fire Weather dashboard sections">
+    <button class="dashboard-tab active" type="button" role="tab" aria-selected="true" aria-controls="panel-analytics" data-panel="panel-analytics"><span class="dashboard-tab-number">01</span>Analytics</button>
+    <button class="dashboard-tab" type="button" role="tab" aria-selected="false" aria-controls="panel-live" data-panel="panel-live"><span class="dashboard-tab-number">02</span>Live Event Stream</button>
+    <button class="dashboard-tab" type="button" role="tab" aria-selected="false" aria-controls="panel-ml" data-panel="panel-ml"><span class="dashboard-tab-number">03</span>Machine Learning</button>
+  </nav>
+
+  <main id="panel-analytics" class="content-scroll fire-content dashboard-panel" role="tabpanel" aria-label="Analytics">
+    <section class="filter-card" aria-label="Telemetry filters">
+      <div class="filter-group">
+        <label for="windowSelect">Time window</label>
+        <select id="windowSelect">
+          <option value="6h">Last 6 hours</option>
+          <option value="24h" selected>Last 24 hours</option>
+          <option value="7d">Last 7 days</option>
+          <option value="30d">Last 30 days</option>
+          <option value="all">All available</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label for="scenarioSelect">Scenario</label>
+        <select id="scenarioSelect">
+          <option value="all">All scenarios</option>
+          <option value="normal">Normal baseline</option>
+          <option value="elevated_dry">Elevated dry</option>
+          <option value="red_flag">Red-flag-like</option>
+          <option value="sensor_fault">Sensor fault</option>
+        </select>
+      </div>
+      <div class="filter-group date-filter">
+        <label for="startInput">Custom start</label>
+        <input id="startInput" type="datetime-local">
+      </div>
+      <div class="filter-group date-filter">
+        <label for="endInput">Custom end</label>
+        <input id="endInput" type="datetime-local">
+      </div>
+      <button class="fire-action primary" id="applyFilters" type="button">Apply filters</button>
+      <button class="fire-action" id="refreshDatabase" type="button">Refresh</button>
+    </section>
+
+    <section class="scope-row">
+      <span class="scope-label" id="scopeLabel">Loading telemetry...</span>
+      <span class="scope-note" id="refreshLabel">Automatic refresh every 10 seconds</span>
+    </section>
+
+    <section class="kpi-row" aria-label="Key monitoring metrics">
+      <article class="kpi-card" style="--kpi-color:#f59e0b"><span class="kpi-label">Average screening risk</span><strong class="kpi-value" id="averageRisk">--</strong><span class="kpi-delta" id="averageRiskNote">Valid observations only</span></article>
+      <article class="kpi-card" style="--kpi-color:#ef4444"><span class="kpi-label">High or extreme events</span><strong class="kpi-value" id="highRiskEvents">--</strong><span class="kpi-delta down" id="highRiskNote">Needs operator review</span></article>
+      <article class="kpi-card" style="--kpi-color:#f97316"><span class="kpi-label">Maximum wind gust</span><strong class="kpi-value" id="maxWindGust">--</strong><span class="kpi-delta" id="maxWindNote">Valid observations only</span></article>
+      <article class="kpi-card" style="--kpi-color:#8b5cf6"><span class="kpi-label">Lowest fuel moisture proxy</span><strong class="kpi-value" id="minFuelMoisture">--</strong><span class="kpi-delta" id="fuelNote">Synthetic fine-fuel proxy</span></article>
+    </section>
+
+    <section class="grid-2">
+      <article class="card">
+        <div class="fire-card-heading"><div><h2 class="card-title">Screening risk trend</h2><p class="card-sub">Temperature, humidity, wind, and modeled fuel moisture. Thresholds: low under 25, elevated 25-49, high 50-74, extreme 75+.</p></div><span class="fire-pill">Not official FWI</span></div>
+        <div class="chart-wrap tall"><canvas id="riskChart" aria-label="Screening fire weather risk trend"></canvas><p class="empty-chart" id="riskEmpty" hidden>No valid risk observations in this time window.</p></div>
+      </article>
+      <article class="card">
+        <div class="fire-card-heading"><div><h2 class="card-title">Weather drivers</h2><p class="card-sub">Temperature, relative humidity, and sustained wind from persisted records.</p></div><span class="fire-pill" id="driverMeta">--</span></div>
+        <div class="chart-wrap tall"><canvas id="driversChart" aria-label="Weather driver trend"></canvas><p class="empty-chart" id="driversEmpty" hidden>No valid weather observations in this time window.</p></div>
+      </article>
+    </section>
+
+    <section class="grid-2">
+      <article class="card">
+        <div class="fire-card-heading"><div><h2 class="card-title">Scenario coverage</h2><p class="card-sub">The subscriber derives a test profile from measurements so each demo story can be verified end-to-end.</p></div><span class="fire-pill" id="coverageMeta">--</span></div>
+        <div class="chart-wrap"><canvas id="scenarioChart" aria-label="Scenario coverage chart"></canvas><p class="empty-chart" id="scenarioEmpty" hidden>No events match this filter.</p></div>
+      </article>
+      <article class="card">
+        <div class="fire-card-heading"><div><h2 class="card-title">Active attention items</h2><p class="card-sub">Derived from the selected PostgreSQL window; faults are separated from weather risk.</p></div></div>
+        <div class="alert-feed" id="alertFeed"></div>
+      </article>
+    </section>
+
+    <section class="card recent-card">
+      <div class="fire-card-heading"><div><h2 class="card-title">Recent persisted events</h2><p class="card-sub">Latest records from the flattened Fire Weather table.</p></div><span class="fire-pill" id="eventCount">--</span></div>
+      <div class="fire-table-wrap"><table class="fire-table"><thead><tr><th>Observed</th><th>Scenario</th><th>Temperature</th><th>Humidity</th><th>Wind / Gust</th><th>Fuel moisture</th><th>Risk</th><th>Status</th></tr></thead><tbody id="recentEventsBody"></tbody></table></div>
+    </section>
+
+    <section class="scenario-guide" aria-label="Scenario guide">
+      <article><strong>Normal baseline</strong><span>Moderate temperature, moisture, and wind; should remain low risk.</span></article>
+      <article><strong>Elevated dry</strong><span>Warmer, drier, and windier conditions; should show elevated or high risk.</span></article>
+      <article><strong>Red-flag-like</strong><span>Hot, very dry, windy, dry-fuel conditions; an extreme screening case, not an official warning.</span></article>
+      <article><strong>Sensor fault</strong><span>Invalid humidity and anemometer values; excluded from risk and ML exports.</span></article>
+    </section>
+  </main>
+
+  <section id="panel-live" class="dashboard-panel added-panel" role="tabpanel" aria-label="Live Event Stream" hidden>
+    <header class="added-panel-header">
+      <div><p class="eyebrow">PostgreSQL activity feed</p><h2>Live persisted events</h2><p>Newest telemetry after it has passed through the MQTT subscriber and been committed to the database.</p></div>
+      <div class="panel-actions"><span class="panel-status" id="liveStatus">Waiting for first refresh</span><button class="fire-action" id="livePause" type="button">Pause</button><button class="fire-action primary" id="liveRefresh" type="button">Refresh now</button></div>
+    </header>
+    <div class="live-summary"><article><strong id="liveCount">--</strong><span>latest events</span></article><article><strong id="liveNewest">--</strong><span>newest observation</span></article><article><strong id="liveState">Live</strong><span>Persistent live connection</span></article></div>
+    <div class="event-feed" id="liveEventFeed" aria-label="Live event cards"><div class="panel-empty">Loading persisted events...</div></div>
+  </section>
+
+  <section id="panel-ml" class="dashboard-panel added-panel" role="tabpanel" aria-label="Machine Learning" hidden>
+    <header class="added-panel-header">
+      <div><p class="eyebrow">Standalone Flask inference</p><h2>Machine-learning prediction</h2><p>Submit one event to the locally running pretrained-model service. Training is not repeated during inference.</p></div>
+      <span class="ml-service-chip" id="mlServiceStatus">Checking ML service...</span>
+    </header>
+    <div class="ml-layout">
+      <form class="card ml-card" id="mlForm">
+        <h3>Event input</h3><p>Choose one prediction task, provide one current event, and submit it over HTTP.</p>
+        <div class="ml-field full"><label for="mlModel">Prediction task</label><select id="mlModel" required><option value="humidity_regression">Predict relative humidity</option><option value="low_humidity_classifier">Predict humidity below 30%</option><option value="pressure_risk_classifier">Predict pressure-drop fire-risk signal</option></select></div>
+        <div class="ml-explainer" id="mlExplanation"></div>
+        <div class="ml-fields">
+          <div class="ml-field"><label for="mlDevice">Device ID</label><input id="mlDevice" value="jena_weather_node_01" required></div>
+          <div class="ml-field"><label for="mlTimestamp">Event time</label><input id="mlTimestamp" type="datetime-local" step="1" required></div>
+          <div class="ml-field"><label for="mlTemperature">Temperature (deg C)</label><input id="mlTemperature" type="number" min="-80" max="60" step="0.1" value="32" required></div>
+          <div class="ml-field"><label for="mlPressure">Pressure (mbar)</label><input id="mlPressure" type="number" min="800" max="1100" step="0.1" value="995" required></div>
+        </div>
+        <button class="fire-action primary ml-submit" id="mlSubmit" type="submit">Make prediction</button>
+        <p class="form-message" id="mlMessage" role="alert"></p>
+      </form>
+      <article class="card ml-card prediction-result" id="mlResult" aria-live="polite"><p class="result-label">Prediction result</p><strong class="result-value">No prediction yet</strong><p>Start the ML service, choose a task, and submit one event.</p></article>
+    </div>
+  </section>
+  <script src="chart.umd.js"></script>
+  <script src="fire.js"></script>
+  <script src="dashboard-tabs.js"></script>
+</body>
+</html>
+
