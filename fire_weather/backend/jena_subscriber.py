@@ -27,6 +27,7 @@ NULLABLE_MEASUREMENTS = {"humidity", "wind_speed_ms", "wind_gust_ms", "fuel_mois
 
 
 def validate_event(event: dict[str, Any]) -> None:
+    """Reject a raw MQTT event when required IDs or measurements are invalid."""
     missing = REQUIRED_FIELDS - event.keys()
     if missing:
         raise ValueError(f"Missing fields: {', '.join(sorted(missing))}")
@@ -47,7 +48,7 @@ def validate_event(event: dict[str, Any]) -> None:
 
 
 def persist_event(event: dict[str, Any], topic: str = MQTT_TOPIC) -> bool:
-    """Insert both rows in one transaction; MQTT retries remain idempotent."""
+    """Classify one valid raw event and save the raw and dashboard-ready rows."""
     scenario = classify_scenario(event)
     data_quality = "invalid" if scenario == "sensor_fault" else "valid"
     failure_point = "humidity_wind_anemometer" if scenario == "sensor_fault" else None
@@ -96,6 +97,7 @@ def persist_event(event: dict[str, Any], topic: str = MQTT_TOPIC) -> bool:
 
 
 def on_message(_client: mqtt.Client, _userdata: Any, message: mqtt.MQTTMessage) -> None:
+    """Decode each MQTT message and pass it to the database writer."""
     try:
         event = json.loads(message.payload.decode("utf-8"))
         validate_event(event)
@@ -107,6 +109,7 @@ def on_message(_client: mqtt.Client, _userdata: Any, message: mqtt.MQTTMessage) 
 
 
 def main() -> None:
+    """Connect to MQTT and listen until the user stops the program."""
     client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
     client.on_message = on_message
     client.connect(MQTT_BROKER, MQTT_PORT, 60)

@@ -14,6 +14,7 @@ from risk_engine import classify_scenario
 
 
 class PipelineContractTests(unittest.TestCase):
+    """Protect the boundary between raw MQTT data and derived labels."""
     def test_raw_event_contains_measurements_not_derived_labels(self) -> None:
         event = generate_jena_telemetry("red_flag", random.Random(29))
         for forbidden in ("scenario", "severity", "risk_level", "risk_score", "is_outlier", "status", "data_quality"):

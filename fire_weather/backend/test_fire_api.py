@@ -1,3 +1,4 @@
+"""Tests for API filters, PostgreSQL reads, live updates, and ML forwarding."""
 from __future__ import annotations
 
 import unittest
@@ -15,6 +16,7 @@ from backend.fire_api import (
 
 
 class FireApiTest(unittest.TestCase):
+    """Check the API behavior without requiring live services."""
     def test_invalid_window_is_rejected(self) -> None:
         with self.assertRaisesRegex(ValueError, "window must be one of"):
             build_filters({"window": ["yesterday"]})

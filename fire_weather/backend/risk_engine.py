@@ -10,6 +10,7 @@ RISK_LEVELS = ("low", "elevated", "high", "extreme", "unknown")
 
 
 def canonical_scenario(value: str) -> str:
+    """Convert older scenario names to the names used by this project."""
     normalized = SCENARIO_ALIASES.get(str(value).strip().lower(), str(value).strip().lower())
     if normalized not in SCENARIOS:
         raise ValueError(f"Unsupported scenario: {value}")
@@ -17,11 +18,12 @@ def canonical_scenario(value: str) -> str:
 
 
 def is_number(value: Any) -> bool:
+    """Check that a sensor value is a real, finite number."""
     return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
 
 
 def classify_scenario(event: dict[str, Any]) -> str:
-    """Classify a test profile from measurements after telemetry is received."""
+    """Infer a scenario from measurements after the raw event is received."""
     required = ("temperature", "humidity", "wind_speed_ms", "fuel_moisture_pct")
     if not all(is_number(event.get(field)) for field in required):
         return "sensor_fault"
@@ -36,21 +38,24 @@ def classify_scenario(event: dict[str, Any]) -> str:
     return "normal"
 
 def saturation_vapor_pressure_mbar(temperature_c: float) -> float:
-    """Magnus approximation of saturation vapor pressure in mbar."""
+    """Estimate maximum vapor pressure at the supplied temperature."""
     return 6.112 * math.exp((17.62 * temperature_c) / (243.12 + temperature_c))
 
 
 def dew_point_c(temperature_c: float, humidity_pct: float) -> float:
+    """Calculate dew point from temperature and relative humidity."""
     humidity = max(0.1, min(100.0, humidity_pct))
     alpha = math.log(humidity / 100.0) + (17.62 * temperature_c) / (243.12 + temperature_c)
     return (243.12 * alpha) / (17.62 - alpha)
 
 
 def potential_temperature_k(temperature_c: float, pressure_mbar: float) -> float:
+    """Convert measured temperature to potential temperature in kelvin."""
     return (temperature_c + 273.15) * (1000.0 / pressure_mbar) ** 0.2854
 
 
 def specific_humidity_gkg(pressure_mbar: float, vapor_pressure_mbar: float) -> float:
+    """Calculate grams of water vapor per kilogram of air."""
     pressure_pa = pressure_mbar * 100.0
     vapor_pa = vapor_pressure_mbar * 100.0
     mixing_ratio = 0.622 * vapor_pa / max(1.0, pressure_pa - vapor_pa)
@@ -58,7 +63,7 @@ def specific_humidity_gkg(pressure_mbar: float, vapor_pressure_mbar: float) -> f
 
 
 def jena_compatible_values(event: dict[str, Any]) -> dict[str, float | None]:
-    """Map a valid flat event to the original Jena climate feature family."""
+    """Derive the extra weather columns expected by the Jena training data."""
     temperature = event.get("temperature")
     pressure = event.get("pressure_mbar")
     humidity = event.get("humidity")
@@ -82,7 +87,7 @@ def jena_compatible_values(event: dict[str, Any]) -> dict[str, float | None]:
 
 
 def assess_fire_weather(event: dict[str, Any]) -> dict[str, Any]:
-    """Return a transparent screening risk, not an official Fire Weather Index."""
+    """Apply simple screening rules and return risk details for the dashboard."""
     quality = str(event.get("data_quality", "valid")).lower()
     values = (event.get("temperature"), event.get("humidity"), event.get("wind_speed_ms"), event.get("fuel_moisture_pct"))
     if quality != "valid" or not all(is_number(value) for value in values):

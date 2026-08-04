@@ -19,6 +19,16 @@ fire_weather/
 `-- README.md
 ```
 
+## How the data moves
+
+1. `backend/jena_event_generator.py` creates raw measurements and publishes them to MQTT.
+2. `backend/jena_subscriber.py` validates each message and stores the original JSON in `jena_telemetry`.
+3. The subscriber uses `backend/risk_engine.py` to derive scenario and risk fields, then stores the dashboard-ready row in `fire_weather_events`.
+4. `backend/fire_api.py` reads PostgreSQL and serves JSON to the browser. It does not create or change events.
+5. The dashboard displays the API response. The optional ML service uses a selected event to make one of the three trained predictions.
+
+The raw MQTT message stays separate from the derived interpretation. It does not contain scenario, severity, risk, outlier, status, or data-quality labels.
+
 No original SensorDashboard package, another intern's files, virtual environment, cache, or generated QA files are included.
 
 ## Prerequisites
@@ -97,7 +107,7 @@ Use separate PowerShell terminals and activate `.venv` in each one.
 
 6. Open [http://127.0.0.1:8000/domain-fire.html](http://127.0.0.1:8000/domain-fire.html).
 
-The generator's raw payload contains only event/device identifiers, time, location, and measurements. Scenario, risk, severity, and outlier labels are derived later; the browser never generates or writes events.
+The generator's raw payload contains only event/device identifiers, time, and sensor measurements. Scenario, risk, severity, and outlier labels are derived after receipt; the browser never generates or writes events.
 
 ## 4. Verify the database and dashboard
 
@@ -106,7 +116,7 @@ python .\db\database_report.py --window 24h
 python .\db\export_telemetry.py --format flat
 ```
 
-The report checks the raw and flattened row counts. The dashboard reads PostgreSQL through the backend API and receives new persisted events through server-sent events.
+The report shows the selected event count, time range, scenario coverage, risk summary, and latest 10 records. The dashboard reads PostgreSQL through the backend API and receives new persisted events through server-sent events.
 
 For a repeatable demo reset that keeps the database and tables:
 

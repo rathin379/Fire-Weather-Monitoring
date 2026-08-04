@@ -1,3 +1,4 @@
+/* Layout and states for the Live Event Stream and Machine Learning tabs. */
 /* Additive tab styles. The original analytics dashboard styles remain unchanged. */
 .dashboard-tabs { display:flex; gap:8px; max-width:1424px; margin:0 auto; padding:16px 22px 0; }
 .dashboard-tab { min-height:38px; border:1px solid var(--border2); border-radius:7px; padding:0 16px; color:var(--dim); background:var(--surface); cursor:pointer; font:600 11px var(--font); }

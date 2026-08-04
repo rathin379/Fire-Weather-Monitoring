@@ -37,6 +37,7 @@ COLUMNS = """
 
 
 def json_response(handler: SimpleHTTPRequestHandler, status: int, payload: dict) -> None:
+    """Send one JSON response with the headers used by every API route."""
     body = json.dumps(payload, default=str).encode("utf-8")
     handler.send_response(status)
     handler.send_header("Content-Type", "application/json; charset=utf-8")
@@ -48,6 +49,7 @@ def json_response(handler: SimpleHTTPRequestHandler, status: int, payload: dict)
 
 
 def parse_iso_datetime(value: str, name: str) -> datetime:
+    """Read an ISO timestamp from a filter and convert it to UTC."""
     try:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     except ValueError as error:
@@ -58,6 +60,7 @@ def parse_iso_datetime(value: str, name: str) -> datetime:
 
 
 def build_filters(params: dict[str, list[str]]) -> tuple[str, list[object], dict[str, str | None]]:
+    """Turn dashboard filters into a safe SQL WHERE clause and parameter list."""
     window = params.get("window", ["24h"])[0].lower()
     if window not in WINDOWS:
         raise ValueError(f"window must be one of: {', '.join(WINDOWS)}")
@@ -89,6 +92,7 @@ def build_filters(params: dict[str, list[str]]) -> tuple[str, list[object], dict
 
 
 def read_events(params: dict[str, list[str]]) -> dict:
+    """Read selected historical events and calculate their summary values."""
     limit = max(1, min(int(params.get("limit", ["1000"])[0]), 5000))
     where, values, filters = build_filters(params)
     event_query = f"SELECT {COLUMNS} FROM fire_weather_events {where} ORDER BY observed_at ASC LIMIT %s"
@@ -193,10 +197,14 @@ def stream_sse(handler: SimpleHTTPRequestHandler, after_id: int) -> None:
         return
 
 class Handler(SimpleHTTPRequestHandler):
+    """Serve dashboard files and route the read-only API requests."""
+
     def __init__(self, *args, **kwargs):
+        # The browser can only request files from the frontend folder.
         super().__init__(*args, directory=str(FRONTEND_ROOT), **kwargs)
 
     def do_GET(self) -> None:
+        """Handle dashboard reads, health checks, and the live event stream."""
         parsed = urlparse(self.path)
         if parsed.path == "/api/fire/stream/live":
             try:
@@ -239,6 +247,7 @@ class Handler(SimpleHTTPRequestHandler):
             return
         super().do_GET()
     def do_POST(self) -> None:
+        """Forward prediction requests to the separate local ML service."""
         parsed = urlparse(self.path)
         if parsed.path != "/api/ml/predict":
             json_response(self, 404, {"error": "Not found"})

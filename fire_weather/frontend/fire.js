@@ -24,6 +24,7 @@
   const formatRange = (first, last) => first && last ? `${formatDate(first)} to ${formatDate(last)}` : "No matching observations";
   const valueWithUnit = (value, unit, digits = 1) => `${formatNumber(value, digits)}${value === null || value === undefined ? "" : ` ${unit}`}`;
 
+  // Update one summary card while keeping its unit styled separately.
   function setKpi(id, value, unit = "", digits = 1) {
     const node = byId(id);
     node.replaceChildren();
@@ -36,6 +37,7 @@
     }
   }
 
+  // Turn the selected time and scenario controls into API query parameters.
   function readFilters() {
     const params = new URLSearchParams({ limit: "5000", window: byId("windowSelect").value, scenario: byId("scenarioSelect").value });
     for (const [inputId, name] of [["startInput", "start"], ["endInput", "end"]]) {
@@ -48,6 +50,8 @@
     return params;
   }
 
+  // Group a large time range into a readable number of chart points.
+  // Each point is an average of the records inside that part of the range.
   function makeBuckets(events) {
     const ordered = [...events].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
     if (!ordered.length) return [];
@@ -89,6 +93,7 @@
     if (typeof window.Chart === "function") chartInstances[id] = new window.Chart(byId(id), config);
   }
 
+  // Rebuild the three charts from the valid database records in this filter.
   function renderCharts(events) {
     const valid = events.filter((event) => event.data_quality === "valid");
     const buckets = makeBuckets(valid);
@@ -125,6 +130,7 @@
     });
   }
 
+  // Create attention messages from derived risk and data-quality fields.
   function renderAlerts(events) {
     const feed = byId("alertFeed");
     feed.replaceChildren();
@@ -146,6 +152,7 @@
     }
   }
 
+  // Show the newest matching records so a reviewer can trace individual events.
   function renderTable(events) {
     const body = byId("recentEventsBody");
     body.replaceChildren();
@@ -182,6 +189,7 @@
     }
   }
 
+  // Update every analytics widget from one API response.
   function render(payload) {
     currentEvents = payload.events || [];
     const valid = currentEvents.filter((event) => event.data_quality === "valid");
@@ -206,6 +214,7 @@
     renderTable(currentEvents);
   }
 
+  // Reload PostgreSQL data and show a clear connection state to the user.
   async function refresh() {
     const started = performance.now();
     try {

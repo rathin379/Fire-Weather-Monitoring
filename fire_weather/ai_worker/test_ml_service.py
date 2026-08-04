@@ -1,3 +1,4 @@
+"""Tests for model loading, request validation, and all three predictions."""
 from __future__ import annotations
 
 import json
@@ -10,6 +11,7 @@ from ai_worker.train_models import DEFAULT_DATASET, train_models
 
 
 class MLServiceTest(unittest.TestCase):
+    """Train temporary models so each endpoint test uses a clean copy."""
     @classmethod
     def setUpClass(cls) -> None:
         cls.temporary_models = tempfile.TemporaryDirectory()
@@ -24,6 +26,7 @@ class MLServiceTest(unittest.TestCase):
         cls.temporary_models.cleanup()
 
     def predict(self, model: str, event: dict) -> tuple[int, dict]:
+        """Send a prediction request and return its status and JSON body."""
         response = self.client.post("/predict", json={"model": model, "event": event})
         return response.status_code, json.loads(response.data)
 

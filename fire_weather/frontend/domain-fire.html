@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="dashboard-tabs.css">
 </head>
 <body>
+  <!-- The header always shows whether the read-only database connection works. -->
   <header class="site-header">
     <div>
       <p class="eyebrow">Operational fire weather monitoring</p>
@@ -20,12 +21,14 @@
       <div><strong id="connectionTitle">Connecting to database...</strong><span id="connectionStatus">The dashboard never generates events or writes data.</span></div>
     </div>
   </header>
+  <!-- These tabs separate historical analysis, live records, and ML predictions. -->
   <nav class="dashboard-tabs" role="tablist" aria-label="Fire Weather dashboard sections">
     <button class="dashboard-tab active" type="button" role="tab" aria-selected="true" aria-controls="panel-analytics" data-panel="panel-analytics"><span class="dashboard-tab-number">01</span>Analytics</button>
     <button class="dashboard-tab" type="button" role="tab" aria-selected="false" aria-controls="panel-live" data-panel="panel-live"><span class="dashboard-tab-number">02</span>Live Event Stream</button>
     <button class="dashboard-tab" type="button" role="tab" aria-selected="false" aria-controls="panel-ml" data-panel="panel-ml"><span class="dashboard-tab-number">03</span>Machine Learning</button>
   </nav>
 
+  <!-- Analytics uses only records returned by PostgreSQL for the selected range. -->
   <main id="panel-analytics" class="content-scroll fire-content dashboard-panel" role="tabpanel" aria-label="Analytics">
     <section class="filter-card" aria-label="Telemetry filters">
       <div class="filter-group">
@@ -107,6 +110,7 @@
     </section>
   </main>
 
+  <!-- The live panel shows committed records; it never creates or publishes events. -->
   <section id="panel-live" class="dashboard-panel added-panel" role="tabpanel" aria-label="Live Event Stream" hidden>
     <header class="added-panel-header">
       <div><p class="eyebrow">PostgreSQL activity feed</p><h2>Live persisted events</h2><p>Newest telemetry after it has passed through the MQTT subscriber and been committed to the database.</p></div>
@@ -116,6 +120,7 @@
     <div class="event-feed" id="liveEventFeed" aria-label="Live event cards"><div class="panel-empty">Loading persisted events...</div></div>
   </section>
 
+  <!-- The ML panel sends one selected reading to one of the three trained models. -->
   <section id="panel-ml" class="dashboard-panel added-panel" role="tabpanel" aria-label="Machine Learning" hidden>
     <header class="added-panel-header">
       <div><p class="eyebrow">Standalone Flask inference</p><h2>Machine-learning prediction</h2><p>Submit one event to the locally running pretrained-model service. Training is not repeated during inference.</p></div>
