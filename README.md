@@ -451,6 +451,7 @@ fire_weather/
 - [PowerPoint presentation](fire_weather/docs/presentation/Fire%20Weather%20Monitoring%20Project.pptx)
 - [Google Slides access document](fire_weather/docs/presentation/Google_Slides_Link.docx)
 - [Deep-dive research report](fire_weather/docs/research/Fire_Weather_Monitoring_Deep_Dive.docx)
+- [Google Docs research report link](fire_weather/docs/research/Google_Doc_Report_Link.docx)
 - [Research URL list](fire_weather/docs/research/research_urls.txt)
 - [Raw event and database contract](fire_weather/docs/FIRE_DATA_CONTRACT.md)
 
