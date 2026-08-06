@@ -31,7 +31,7 @@ You need:
 
 Install PostgreSQL and Mosquitto before following the pipeline steps. During PostgreSQL setup, remember the password you create for the `postgres` user. The password is used locally through `POSTGRES_DSN`; it is never stored in this repository.
 
-The software demo does not require an Arduino. The `edge/` folder documents the planned hardware boundary and placeholder material.
+The software demo does not require an Arduino. The `edge/` folder contains the internship sensor sketches for reference; those sketches are separate from the simulated MQTT pipeline.
 
 ## Clone the repository
 
@@ -183,7 +183,7 @@ If the database user has a password, PostgreSQL may ask for it when `psql` opens
 
 ## Set the database connection
 
-Set this variable in every terminal that runs a project service. Replace only `YOUR_PASSWORD`. Do not commit the real password or put it in a project file.
+Set this variable in each terminal that runs the subscriber, dashboard API, ML service, database report, or export script. Replace only `YOUR_PASSWORD`. Do not commit the real password or put it in a project file.
 
 ### Windows PowerShell
 
@@ -238,7 +238,63 @@ Use four terminal windows on the same computer:
 
 The PostgreSQL and Mosquitto services normally run in the background. Open a fifth terminal only if you had to start Mosquitto with `mosquitto -v`.
 
-In each of the four project terminals, repeat the following setup before running that terminal's service command: change into `fire_weather`, activate `.venv`, and set `POSTGRES_DSN` using the commands above. Do not recreate the environment or reinstall packages in the additional terminals.
+Prepare each project terminal separately before starting its service. A folder change, virtual-environment activation, and `POSTGRES_DSN` value only apply to the terminal where you type them.
+
+### Windows PowerShell
+
+At the beginning of each of the four project terminals, run:
+
+```powershell
+cd .\Fire-Weather-Monitoring\fire_weather
+```
+
+If the prompt already ends in `Fire-Weather-Monitoring\fire_weather>`, skip the `cd` command.
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
+
+In Terminal 1 (subscriber), Terminal 2 (API), and Terminal 3 (ML service), also run:
+
+```powershell
+$env:POSTGRES_DSN = "dbname=iot_platform user=postgres password=YOUR_PASSWORD host=127.0.0.1 port=5432"
+```
+
+Use the PostgreSQL password created on that computer. Do not use a GitHub or Windows password. Then verify the database connection in those three terminals:
+
+```powershell
+python -c "import os, psycopg2; c=psycopg2.connect(os.environ['POSTGRES_DSN'], connect_timeout=5); print('PostgreSQL connection OK'); c.close()"
+```
+
+Terminal 4 (event generator) does not use PostgreSQL, so it needs only the folder and virtual-environment setup.
+
+### macOS Terminal
+
+At the beginning of each of the four project terminals, run:
+
+```bash
+cd Fire-Weather-Monitoring/fire_weather
+```
+
+If the terminal is already in the `Fire-Weather-Monitoring/fire_weather` folder, skip the `cd` command.
+
+```bash
+source .venv/bin/activate
+```
+
+In Terminal 1 (subscriber), Terminal 2 (API), and Terminal 3 (ML service), also run:
+
+```bash
+export POSTGRES_DSN="dbname=iot_platform user=postgres password=YOUR_PASSWORD host=127.0.0.1 port=5432"
+```
+
+Use the PostgreSQL password created on that computer. Do not use a GitHub or macOS password. Then verify the database connection in those three terminals:
+
+```bash
+python -c "import os, psycopg2; c=psycopg2.connect(os.environ['POSTGRES_DSN'], connect_timeout=5); print('PostgreSQL connection OK'); c.close()"
+```
+
+Terminal 4 (event generator) does not use PostgreSQL, so it needs only the folder and virtual-environment setup.
 
 Start the subscriber first. It listens for MQTT messages and writes them to PostgreSQL.
 
@@ -268,7 +324,7 @@ python .\backend\fire_api.py
 python ./backend/fire_api.py
 ```
 
-Start the optional ML inference service in a third terminal.
+Start the ML inference service in a third terminal. It is required for the Machine Learning tab and all three prediction tasks.
 
 ### Windows PowerShell
 
@@ -281,6 +337,30 @@ python .\ai_worker\ml_service.py
 ```bash
 python ./ai_worker/ml_service.py
 ```
+
+Before starting Terminal 4, confirm that Terminal 2 and Terminal 3 are responding:
+
+### Windows PowerShell
+
+```powershell
+curl.exe http://127.0.0.1:8000/api/fire/health
+```
+
+```powershell
+curl.exe http://127.0.0.1:5001/health
+```
+
+### macOS Terminal
+
+```bash
+curl http://127.0.0.1:8000/api/fire/health
+```
+
+```bash
+curl http://127.0.0.1:5001/health
+```
+
+Continue only after both services respond successfully. The ML health endpoint confirms that the models loaded; the PostgreSQL connection test above confirms that the ML service can access its database context.
 
 Generate reproducible demo data in a fourth terminal. Run this only after the broker and subscriber are running.
 
@@ -410,6 +490,7 @@ python ./ai_worker/train_models.py --max-samples 100000
 - **Mosquitto will not start:** Check whether port `1883` is already occupied. If the broker is already running, do not launch a second broker; use the existing one.
 - **No new events appear:** Start the subscriber before the generator, confirm both use `localhost:1883` and topic `devices/telemetry`, and keep the subscriber terminal open.
 - **The ML tab says the service is offline:** Start `ml_service.py` and confirm `http://127.0.0.1:5001/health` responds successfully.
+- **Pressure-risk prediction says PostgreSQL is unavailable:** Set POSTGRES_DSN in Terminal 3 and restart ml_service.py. This task loads the previous valid pressure event from PostgreSQL; the ML health endpoint alone does not verify that database query.
 - **A port is already in use:** Stop the old copy of that service before starting another one. The dashboard API uses port `8000`; the ML service uses port `5001`; Mosquitto uses port `1883`; PostgreSQL uses port `5432`.
 - **PowerShell refuses activation:** Run `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` in that PowerShell window, then activate `.venv` again.
 - **macOS says a command is not found:** Confirm Python, PostgreSQL, Mosquitto, and Homebrew are installed and that their command folders are on PATH.
@@ -440,7 +521,7 @@ fire_weather/
 |-- db/                       PostgreSQL schema, reset/report/export scripts, sample export
 |-- ai_worker/                Training notebook/scripts, saved models, and inference service
 |-- backend/                  MQTT generator/subscriber, API, risk engine, and tests
-|-- edge/                     Arduino placeholder and future hardware images
+|-- edge/                     Arduino sensor sketches and future hardware images
 |-- docs/                     Dataset, report, presentation, and data contract
 |-- requirements.txt
 `-- README.md
