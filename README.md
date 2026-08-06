@@ -229,7 +229,7 @@ mosquitto -v
 
 ## Start the complete pipeline on one computer
 
-Use four terminal windows on the same computer:
+Open four terminal windows(tabs) on the same computer:
 
 - Terminal 1: MQTT subscriber
 - Terminal 2: dashboard API
