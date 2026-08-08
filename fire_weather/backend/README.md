@@ -21,4 +21,10 @@ Generate a finite demonstration:
 python .\backend\jena_event_generator.py --scenario mixed --count 300 --seed 29
 ```
 
+Optional historical backfill:
+
+```powershell
+python .\backend\jena_event_generator.py --historical --days 30 --count 10000
+```
+
 Database setup/report/export programs are deliberately in `../db`. Full setup, reset, and verification instructions are in `../README.md`.

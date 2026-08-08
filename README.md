@@ -370,6 +370,12 @@ Generate reproducible demo data in a fourth terminal. Run this only after the br
 python .\backend\jena_event_generator.py --scenario mixed --count 300 --seed 29
 ```
 
+Optional historical backfill:
+
+```powershell
+python .\backend\jena_event_generator.py --historical --days 30 --count 10000
+```
+
 ### macOS Terminal
 
 ```bash
