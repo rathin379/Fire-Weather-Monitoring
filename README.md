@@ -382,6 +382,12 @@ python .\backend\jena_event_generator.py --historical --days 30 --count 10000
 python ./backend/jena_event_generator.py --scenario mixed --count 300 --seed 29
 ```
 
+Optional historical backfill:
+
+```bash
+python ./backend/jena_event_generator.py --historical --days 30 --count 10000
+```
+
 Open the dashboard after the generator finishes publishing:
 
 [http://127.0.0.1:8000/domain-fire.html](http://127.0.0.1:8000/domain-fire.html)
