@@ -8,7 +8,8 @@ import random
 import time
 import uuid
 from collections import Counter
-from datetime import datetime, timezone
+from collections.abc import Iterator
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import paho.mqtt.client as mqtt
@@ -89,7 +90,27 @@ def _scenario_values(scenario: str, rng: random.Random) -> dict[str, Any]:
     raise ValueError(f"Unsupported scenario: {scenario}")
 
 
-def generate_jena_telemetry(scenario: str = "mixed", rng: random.Random | None = None) -> dict[str, Any]:
+def _historical_timestamps(
+    count: int,
+    days: int,
+    end: datetime,
+    rng: random.Random,
+) -> Iterator[datetime]:
+    """Spread timestamps across the requested historical window."""
+    start = end - timedelta(days=days)
+    window = end - start
+    for index in range(count):
+        # Use one random point inside each bucket so a large backfill has a
+        # realistic spread instead of clustering at one end of the window.
+        position = (index + rng.random()) / count
+        yield start + (window * position)
+
+
+def generate_jena_telemetry(
+    scenario: str = "mixed",
+    rng: random.Random | None = None,
+    timestamp: datetime | None = None,
+) -> dict[str, Any]:
     """Create one raw sensor event; scenario only shapes values and is not emitted."""
     rng = rng or random.Random()
     requested = canonical_scenario(scenario)
@@ -102,7 +123,7 @@ def generate_jena_telemetry(scenario: str = "mixed", rng: random.Random | None =
         "schema_version": "2.0",
         "event_id": str(uuid.uuid4()),
         "device_id": DEVICE_ID,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": (timestamp or datetime.now(timezone.utc)).isoformat(),
         **values,
         "air_density": air_density,
     }
@@ -125,13 +146,23 @@ def publish_events(args: argparse.Namespace) -> None:
     published: Counter[str] = Counter()
     failures = 0
     start = time.perf_counter()
+    historical_timestamps: Iterator[datetime] | None = None
+    if args.historical:
+        historical_end = datetime.now(timezone.utc)
+        historical_start = historical_end - timedelta(days=args.days)
+        historical_timestamps = _historical_timestamps(args.count, args.days, historical_end, rng)
+        print(
+            f"[GENERATOR] Historical window: {historical_start.isoformat()} "
+            f"to {historical_end.isoformat()}"
+        )
     try:
         client.connect(args.broker, args.port, 60)
         client.loop_start()
         print(f"[GENERATOR] Connected to MQTT {args.broker}:{args.port}; topic={args.topic}")
         index = 0
         while args.count == 0 or index < args.count:
-            event = generate_jena_telemetry(scenario, rng)
+            timestamp = next(historical_timestamps) if historical_timestamps is not None else None
+            event = generate_jena_telemetry(scenario, rng, timestamp=timestamp)
             info = client.publish(args.topic, json.dumps(event), qos=1)
             if info.rc != mqtt.MQTT_ERR_SUCCESS:
                 failures += 1
@@ -167,12 +198,25 @@ def main() -> None:
     parser.add_argument("--verbose", action="store_true", help="Print every generated event.")
     parser.add_argument("-q", "--quiet", action="store_true", help=argparse.SUPPRESS)
     parser.add_argument("--seed", type=int, help="Optional seed for a reproducible scenario run.")
+    parser.add_argument(
+        "--historical",
+        action="store_true",
+        help="Spread a finite run across the previous --days instead of using the current time.",
+    )
+    parser.add_argument(
+        "--days",
+        type=int,
+        default=30,
+        help="Historical window in days when --historical is used (default: 30).",
+    )
     parser.add_argument("--broker", default=DEFAULT_BROKER)
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
     parser.add_argument("--topic", default=DEFAULT_TOPIC)
     args = parser.parse_args()
-    if args.count < 0 or args.interval < 1 or args.summary_every < 1:
-        parser.error("count must be non-negative; interval and summary-every must be positive")
+    if args.count < 0 or args.interval < 1 or args.summary_every < 1 or args.days < 1:
+        parser.error("count must be non-negative; interval, summary-every, and days must be positive")
+    if args.historical and args.count == 0:
+        parser.error("--historical requires --count greater than 0")
     if args.quiet:
         args.verbose = False
         args.summary_every = max(args.summary_every, 10_000_000)
